@@ -1,6 +1,8 @@
-﻿Optimizely CMS Content Scaffolding
+﻿# Optimizely CMS Content Scaffolding
 
-Scaffold thousands of pages with any structure using just a few lines of code using fluent coding style.
+Scaffold thousands of pages with any structure with just a few lines of code using fluent coding style.
+
+## Example
 
 app.UseCmsContentScaffolding(
     builderOptions: o =>

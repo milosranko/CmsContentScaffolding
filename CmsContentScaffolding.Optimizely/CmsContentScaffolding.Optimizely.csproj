@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>1.8.2</Version>
+    <Version>1.8.3</Version>
     <Title>CmsContentScaffolding for Optimizely CMS</Title>
     <Company>MDR Solutions DOO</Company>
     <Authors>Milos Rankovic</Authors>
@@ -17,6 +17,18 @@
     <EnablePackageValidation>true</EnablePackageValidation>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>optimizely, unit test, scaffolding</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>False</Optimize>
+    <DebugType>full</DebugType>
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>True</Optimize>
+    <DebugType>full</DebugType>
+    <WarningLevel>8</WarningLevel>
   </PropertyGroup>
 
   <ItemGroup>

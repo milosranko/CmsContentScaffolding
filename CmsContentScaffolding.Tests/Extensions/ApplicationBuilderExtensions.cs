@@ -2,7 +2,6 @@
 using CmsContentScaffolding.Optimizely.Helpers;
 using CmsContentScaffolding.Optimizely.Models;
 using CmsContentScaffolding.Optimizely.Startup;
-using CmsContentScaffolding.Optimizely.Tests.Extensions;
 using CmsContentScaffolding.Optimizely.Tests.Models.Blocks;
 using CmsContentScaffolding.Optimizely.Tests.Models.Media;
 using CmsContentScaffolding.Optimizely.Tests.Models.Pages;
@@ -18,7 +17,7 @@ namespace CmsContentScaffolding.Optimizely.Tests.Extensions;
 
 internal static class ApplicationBuilderExtensions
 {
-    public static IApplicationBuilder UseCmsContentScaffolding(this IApplicationBuilder app)
+    public static IApplicationBuilder AddCmsContent(this IApplicationBuilder app)
     {
         app.UseCmsContentScaffolding(
             builderOptions: o =>
@@ -35,7 +34,7 @@ internal static class ApplicationBuilderExtensions
                 };
                 o.Users = new List<UserModel>
                 {
-                    new("Site1User", "Site1User@test.com", TestUserPassword, new[] { Site1EditorsRole })
+                    new("Site1User", "Site1User@test.com", TestUserPassword, [Site1EditorsRole])
                 };
             },
             builder: b =>
@@ -206,7 +205,7 @@ internal static class ApplicationBuilderExtensions
                 };
                 o.Users = new List<UserModel>
                 {
-                    new("Site2User", "Site2User@test.com", TestUserPassword, new[] { Site2EditorsRole })
+                    new("Site2User", "Site2User@test.com", TestUserPassword, [Site2EditorsRole])
                 };
             },
             builder: b =>

@@ -36,7 +36,7 @@ public static class PropertyHelpers
             : SiteDefinition.Current.SiteAssetsRoot;
         var existingItems = _contentRepository.Service
             .GetChildren<TMedia>(mediaFolder)
-            .Where(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            .Where(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         if (existingItems != null && existingItems.Any())
             return existingItems.ElementAt(0).ContentLink;

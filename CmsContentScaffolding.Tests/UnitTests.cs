@@ -56,7 +56,7 @@ public class UnitTests
                 config.UseUrls(Site1HostUrl, Site2HostUrl);
                 config.Configure(app =>
                 {
-                    app.UseCmsContentScaffolding();
+                    app.AddCmsContent();
                 });
             });
 
@@ -281,7 +281,7 @@ public class UnitTests
 
         //Assert
         Assert.IsNotNull(page);
-        Assert.IsTrue(page.Name.Equals("Start Page [SV]", StringComparison.InvariantCultureIgnoreCase));
+        Assert.IsTrue(page.Name.Equals("Start Page [SV]", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]

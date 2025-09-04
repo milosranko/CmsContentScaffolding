@@ -92,7 +92,7 @@ internal class AssetsBuilder : IAssetsBuilder
 
         var existingContent = _contentRepository
             .GetChildren<T>(contentReference, _options.Language)
-            .SingleOrDefault(x => ((IContent)x).Name.Equals(content.Name, StringComparison.InvariantCultureIgnoreCase));
+            .SingleOrDefault(x => ((IContent)x).Name.Equals(content.Name, StringComparison.OrdinalIgnoreCase));
 
         if (existingContent is null)
         {
@@ -129,7 +129,7 @@ internal class AssetsBuilder : IAssetsBuilder
 
         var existingContent = _contentRepository
             .GetChildren<ContentFolder>(contentReference, _options.Language)
-            .SingleOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            .SingleOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         if (existingContent is null)
         {
@@ -170,7 +170,7 @@ internal class AssetsBuilder : IAssetsBuilder
 
         var existingItem = _contentRepository
             .GetChildren<T>(contentReference, _options.Language)
-            .FirstOrDefault(x => x.Name.Equals(media.Name, StringComparison.InvariantCultureIgnoreCase));
+            .FirstOrDefault(x => x.Name.Equals(media.Name, StringComparison.OrdinalIgnoreCase));
 
         if (existingItem != null)
         {
@@ -205,7 +205,7 @@ internal class AssetsBuilder : IAssetsBuilder
             : SiteDefinition.Current.SiteAssetsRoot;
         var existingBlock = _contentRepository
             .GetChildren<T>(contentReference, _options.Language)
-            .SingleOrDefault(x => ((IContent)x).Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            .SingleOrDefault(x => ((IContent)x).Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         if (existingBlock is not null)
         {

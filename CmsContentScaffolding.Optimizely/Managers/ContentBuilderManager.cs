@@ -97,7 +97,7 @@ internal class ContentBuilderManager : IContentBuilderManager
                     Name = siteUri.Authority,
                     Language = _options.Language,
                     Type = HostDefinitionType.Primary,
-                    UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.InvariantCultureIgnoreCase)
+                    UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
                 }
             }
         };
@@ -225,7 +225,7 @@ internal class ContentBuilderManager : IContentBuilderManager
     public void SetContentName<T>(IContent content, string? name = default, string? nameSuffix = default) where T : IContentData
     {
         if (!string.IsNullOrEmpty(content.Name) &&
-            !content.Name.Equals(Constants.TempPageName, StringComparison.InvariantCultureIgnoreCase) &&
+            !content.Name.Equals(Constants.TempPageName, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrEmpty(nameSuffix))
             return;
 
@@ -293,9 +293,9 @@ internal class ContentBuilderManager : IContentBuilderManager
     private void DisableLanguage(string languageId)
     {
         var availableLanguages = _languageBranchRepository.ListAll();
-        var lang = availableLanguages.SingleOrDefault(x => x.LanguageID.Equals(languageId, StringComparison.InvariantCultureIgnoreCase));
+        var lang = availableLanguages.SingleOrDefault(x => x.LanguageID.Equals(languageId, StringComparison.OrdinalIgnoreCase));
 
-        if (lang != null && !_options.Language.TwoLetterISOLanguageName.Equals(languageId, StringComparison.InvariantCultureIgnoreCase))
+        if (lang != null && !_options.Language.TwoLetterISOLanguageName.Equals(languageId, StringComparison.OrdinalIgnoreCase))
             _languageBranchRepository.Disable(lang.Culture);
     }
 
