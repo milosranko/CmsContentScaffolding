@@ -1,5 +1,4 @@
 using CmsContentScaffolding.Optimizely.Startup;
-using CmsContentScaffolding.Optimizely.Tests;
 using CmsContentScaffolding.Optimizely.Tests.Extensions;
 using CmsContentScaffolding.Optimizely.Tests.Models.Blocks;
 using CmsContentScaffolding.Optimizely.Tests.Models.Pages;
@@ -8,6 +7,7 @@ using EPiServer.Cms.UI.AspNetIdentity;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.Filters;
+using EPiServer.Scheduler;
 using EPiServer.ServiceLocation;
 using EPiServer.Web;
 using Microsoft.AspNetCore.Hosting;
@@ -18,7 +18,7 @@ using Microsoft.Extensions.Hosting;
 using System.Globalization;
 using static CmsContentScaffolding.Optimizely.Tests.Constants.StringConstants;
 
-namespace CmsContentScaffolding.Tests;
+namespace CmsContentScaffolding.Optimizely.Tests;
 
 [TestClass]
 public class UnitTests
@@ -41,6 +41,7 @@ public class UnitTests
             .ConfigureServices((context, services) =>
             {
                 services
+                .Configure<SchedulerOptions>(o => o.Enabled = false)
                 .AddSingleton<IHttpContextFactory, DefaultHttpContextFactory>()
                 .AddCmsAspNetIdentity<ApplicationUser>()
                 .AddCms()

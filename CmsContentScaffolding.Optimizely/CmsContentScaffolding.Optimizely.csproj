@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>1.8.3</Version>
+    <Version>1.8.4</Version>
     <Title>CmsContentScaffolding for Optimizely CMS</Title>
     <Company>MDR Solutions DOO</Company>
     <Authors>Milos Rankovic</Authors>
     <Description>Unit testing helper for Optimizely CMS</Description>
     <RepositoryUrl>https://github.com/milosranko/CmsContentScaffolding</RepositoryUrl>
-    <Copyright>MDR Solutions DOO</Copyright>
+    <Copyright>MDR Solutions DOO, Milos Rankovic</Copyright>
     <PackageProjectUrl>https://github.com/milosranko/CmsContentScaffolding</PackageProjectUrl>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <EnablePackageValidation>true</EnablePackageValidation>
@@ -20,13 +20,13 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <Optimize>False</Optimize>
+    <Optimize>True</Optimize>
     <DebugType>full</DebugType>
     <WarningLevel>8</WarningLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <Optimize>True</Optimize>
+    <Optimize>False</Optimize>
     <DebugType>full</DebugType>
     <WarningLevel>8</WarningLevel>
   </PropertyGroup>
