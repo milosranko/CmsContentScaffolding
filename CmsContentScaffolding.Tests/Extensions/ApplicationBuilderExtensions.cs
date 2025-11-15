@@ -32,10 +32,10 @@ internal static class ApplicationBuilderExtensions
                 {
                     { Site1EditorsRole, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit }
                 };
-                o.Users = new List<UserModel>
-                {
+                o.Users =
+                [
                     new("Site1User", "Site1User@test.com", TestUserPassword, [Site1EditorsRole])
-                };
+                ];
             },
             builder: b =>
             {
@@ -203,10 +203,10 @@ internal static class ApplicationBuilderExtensions
                 {
                     { Site2EditorsRole, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit }
                 };
-                o.Users = new List<UserModel>
-                {
+                o.Users =
+                [
                     new("Site2User", "Site2User@test.com", TestUserPassword, [Site2EditorsRole])
-                };
+                ];
             },
             builder: b =>
             {

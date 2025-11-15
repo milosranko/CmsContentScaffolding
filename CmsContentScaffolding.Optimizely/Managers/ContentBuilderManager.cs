@@ -90,8 +90,8 @@ internal class ContentBuilderManager : IContentBuilderManager
             StartPage = startPage,
             SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
             SiteUrl = siteUri,
-            Hosts = new List<HostDefinition>
-            {
+            Hosts =
+            [
                 new()
                 {
                     Name = siteUri.Authority,
@@ -99,7 +99,7 @@ internal class ContentBuilderManager : IContentBuilderManager
                     Type = HostDefinitionType.Primary,
                     UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
                 }
-            }
+            ]
         };
 
         _siteDefinitionRepository.Save(siteDefinition);
