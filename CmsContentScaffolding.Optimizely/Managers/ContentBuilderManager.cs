@@ -6,6 +6,7 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAccess;
 using EPiServer.Security;
+using EPiServer.ServiceLocation;
 using EPiServer.Shell.Security;
 using EPiServer.Web;
 using System.Globalization;
@@ -22,8 +23,6 @@ internal class ContentBuilderManager : IContentBuilderManager
     private readonly IContentLoader _contentLoader;
     private readonly ILanguageBranchRepository _languageBranchRepository;
     private readonly IContentTypeRepository _contentTypeRepository;
-    private readonly UIRoleProvider _uIRoleProvider;
-    private readonly UIUserProvider _uIUserProvider;
     private readonly ContentBuilderOptions _options;
 
     #endregion
@@ -50,8 +49,6 @@ internal class ContentBuilderManager : IContentBuilderManager
         ContentBuilderOptions options,
         IContentLoader contentLoader,
         ILanguageBranchRepository languageBranchRepository,
-        UIRoleProvider uIRoleProvider,
-        UIUserProvider uIUserProvider,
         IContentSecurityRepository contentSecurityRepository,
         IContentTypeRepository contentTypeRepository)
     {
@@ -60,8 +57,6 @@ internal class ContentBuilderManager : IContentBuilderManager
         _options = options;
         _contentLoader = contentLoader;
         _languageBranchRepository = languageBranchRepository;
-        _uIRoleProvider = uIRoleProvider;
-        _uIUserProvider = uIUserProvider;
         _contentSecurityRepository = contentSecurityRepository;
         _contentTypeRepository = contentTypeRepository;
     }
@@ -90,8 +85,8 @@ internal class ContentBuilderManager : IContentBuilderManager
             StartPage = startPage,
             SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
             SiteUrl = siteUri,
-            Hosts =
-            [
+            Hosts = new List<HostDefinition>
+            {
                 new()
                 {
                     Name = siteUri.Authority,
@@ -99,7 +94,7 @@ internal class ContentBuilderManager : IContentBuilderManager
                     Type = HostDefinitionType.Primary,
                     UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
                 }
-            ]
+            }
         };
 
         _siteDefinitionRepository.Save(siteDefinition);
@@ -167,6 +162,9 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public void CreateDefaultRoles(IDictionary<string, AccessLevel> roles)
     {
+        if (!ServiceLocator.Current.TryGetExistingInstance<UIRoleProvider>(out var uiRoleProvider))
+            return;
+
         if (!roles.Any())
             return;
 
@@ -174,10 +172,10 @@ internal class ContentBuilderManager : IContentBuilderManager
 
         foreach (var role in roles)
         {
-            if (_uIRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
+            if (uiRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
                 continue;
 
-            _uIRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
+            uiRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
 
             if (rootPageSecurity == null || rootPageSecurity.Entries.Any(x => x.Name.Equals(role.Key)))
                 continue;
@@ -189,20 +187,29 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public void CreateRoles(IDictionary<string, AccessLevel>? roles)
     {
+        if (!ServiceLocator.Current.TryGetExistingInstance<UIRoleProvider>(out var uiRoleProvider))
+            return;
+
         if (roles is null || !roles.Any())
             return;
 
         foreach (var role in roles)
         {
-            if (_uIRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
+            if (uiRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
                 continue;
 
-            _uIRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
+            uiRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
         }
     }
 
     public void CreateUsers(IEnumerable<UserModel>? users)
     {
+        if (!ServiceLocator.Current.TryGetExistingInstance<UIRoleProvider>(out var uiRoleProvider))
+            return;
+
+        if (!ServiceLocator.Current.TryGetExistingInstance<UIUserProvider>(out var uiUserProvider))
+            return;
+
         if (users is null || !users.Any())
             return;
 
@@ -210,15 +217,15 @@ internal class ContentBuilderManager : IContentBuilderManager
 
         foreach (var user in users)
         {
-            uiUser = _uIUserProvider.GetUserAsync(user.UserName).GetAwaiter().GetResult();
+            uiUser = uiUserProvider.GetUserAsync(user.UserName).GetAwaiter().GetResult();
 
             if (uiUser != null)
                 continue;
 
-            _uIUserProvider.CreateUserAsync(user.UserName, user.Password, user.Email, null, null, true).GetAwaiter().GetResult();
+            uiUserProvider.CreateUserAsync(user.UserName, user.Password, user.Email, null, null, true).GetAwaiter().GetResult();
 
             if (user.Roles.Any())
-                _uIRoleProvider.AddUserToRolesAsync(user.UserName, user.Roles).GetAwaiter().GetResult();
+                uiRoleProvider.AddUserToRolesAsync(user.UserName, user.Roles).GetAwaiter().GetResult();
         }
     }
 

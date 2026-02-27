@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>1.8.4</Version>
+    <Version>1.9.0</Version>
     <Title>CmsContentScaffolding for Optimizely CMS</Title>
     <Company>MDR Solutions DOO</Company>
     <Authors>Milos Rankovic</Authors>
@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/milosranko/CmsContentScaffolding</RepositoryUrl>
     <Copyright>MDR Solutions DOO, Milos Rankovic</Copyright>
     <PackageProjectUrl>https://github.com/milosranko/CmsContentScaffolding</PackageProjectUrl>
-    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <EnablePackageValidation>true</EnablePackageValidation>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>optimizely, unit test, scaffolding</PackageTags>
@@ -32,14 +32,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="EPiServer.CMS.UI.Core" Version="[12.4,13.0)" />
+    <PackageReference Include="EPiServer.CMS.UI.Core" Version="12.34.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
