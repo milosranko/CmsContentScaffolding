@@ -103,19 +103,19 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public void SetStartPageSecurity(ContentReference pageRef)
     {
-        if (_options.Roles is null || !_options.Roles.Any())
+        if (_options.SiteRolesAccessLevel is null || !_options.SiteRolesAccessLevel.Any())
             return;
 
         if (_contentSecurityRepository.Get(SiteDefinition.Current.StartPage).CreateWritableClone() is IContentSecurityDescriptor startPageSecurity)
         {
-            foreach (var role in _options.Roles)
+            foreach (var role in _options.SiteRolesAccessLevel)
                 if (startPageSecurity.Entries.Any(x => x.Name.Equals(role)))
                     return;
 
             if (startPageSecurity.IsInherited)
                 startPageSecurity.ToLocal();
 
-            foreach (var role in _options.Roles)
+            foreach (var role in _options.SiteRolesAccessLevel)
                 startPageSecurity.AddEntry(new AccessControlEntry(role.Key, role.Value, SecurityEntityType.Role));
 
             _contentSecurityRepository.Save(startPageSecurity.ContentLink, startPageSecurity, SecuritySaveType.Replace);
@@ -162,8 +162,7 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public void CreateDefaultRoles(IDictionary<string, AccessLevel> roles)
     {
-        if (!ServiceLocator.Current.TryGetExistingInstance<UIRoleProvider>(out var uiRoleProvider))
-            return;
+        _ = ServiceLocator.Current.TryGetExistingInstance<UIRoleProvider>(out var uiRoleProvider);
 
         if (!roles.Any())
             return;
@@ -172,10 +171,13 @@ internal class ContentBuilderManager : IContentBuilderManager
 
         foreach (var role in roles)
         {
-            if (uiRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
-                continue;
+            if (uiRoleProvider != null)
+            {
+                if (uiRoleProvider.RoleExistsAsync(role.Key).GetAwaiter().GetResult())
+                    continue;
 
-            uiRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
+                uiRoleProvider.CreateRoleAsync(role.Key).GetAwaiter().GetResult();
+            }
 
             if (rootPageSecurity == null || rootPageSecurity.Entries.Any(x => x.Name.Equals(role.Key)))
                 continue;

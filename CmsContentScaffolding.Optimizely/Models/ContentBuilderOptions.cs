@@ -33,13 +33,13 @@ public record ContentBuilderOptions
     /// </summary>
     public bool PublishContent { get; set; } = false;
     /// <summary>
-    /// Set to False if you don't want WebAdmins and WebEditors roles to be created
+    /// Default roles that are set on the root
     /// </summary>
-    public bool CreateDefaultRoles { get; set; } = true;
+    public IDictionary<string, AccessLevel>? RootRolesAccessLevel { get; set; }
     /// <summary>
     /// Define new roles
     /// </summary>
-    public IDictionary<string, AccessLevel>? Roles { get; set; }
+    public IDictionary<string, AccessLevel>? SiteRolesAccessLevel { get; set; }
     /// <summary>
     /// Define new users thah will have an access to site instance
     /// </summary>

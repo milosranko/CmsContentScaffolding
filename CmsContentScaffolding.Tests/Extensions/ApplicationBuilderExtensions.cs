@@ -7,6 +7,7 @@ using CmsContentScaffolding.Optimizely.Tests.Models.Media;
 using CmsContentScaffolding.Optimizely.Tests.Models.Pages;
 using CmsContentScaffolding.Shared.Resources;
 using EPiServer;
+using EPiServer.Authorization;
 using EPiServer.Core;
 using EPiServer.Security;
 using Microsoft.AspNetCore.Builder;
@@ -28,7 +29,12 @@ internal static class ApplicationBuilderExtensions
                 o.StartPageType = typeof(StartPage);
                 o.BuildMode = BuildMode.Append;
                 o.PublishContent = true;
-                o.Roles = new Dictionary<string, AccessLevel>
+                o.RootRolesAccessLevel = new Dictionary<string, AccessLevel>
+                {
+                    { Roles.CmsEditors, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit | AccessLevel.Publish },
+                    { Roles.CmsAdmins, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit | AccessLevel.Publish | AccessLevel.Administer | AccessLevel.FullAccess }
+                };
+                o.SiteRolesAccessLevel = new Dictionary<string, AccessLevel>
                 {
                     { Site1EditorsRole, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit }
                 };
@@ -199,7 +205,7 @@ internal static class ApplicationBuilderExtensions
                 o.Language = CultureInfo.GetCultureInfo("en");
                 o.BuildMode = BuildMode.Overwrite;
                 o.PublishContent = true;
-                o.Roles = new Dictionary<string, AccessLevel>
+                o.SiteRolesAccessLevel = new Dictionary<string, AccessLevel>
                 {
                     { Site2EditorsRole, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit }
                 };

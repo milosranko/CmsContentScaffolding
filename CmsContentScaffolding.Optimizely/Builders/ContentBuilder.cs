@@ -2,139 +2,133 @@
 using CmsContentScaffolding.Optimizely.Interfaces;
 using CmsContentScaffolding.Optimizely.Models;
 using EPiServer;
-using EPiServer.Authorization;
 using EPiServer.Core;
 using EPiServer.Framework.Blobs;
-using EPiServer.Security;
 using EPiServer.Web;
 
 namespace CmsContentScaffolding.Optimizely.Builders;
 
 internal class ContentBuilder : IContentBuilder
 {
-	#region Private properties
+    #region Private properties
 
-	private readonly IContentRepository _contentRepository;
-	private readonly IContentBuilderManager _contentBuilderManager;
-	private readonly IBlobFactory _blobFactory;
-	private readonly ContentAssetHelper _contentAssetHelper;
-	private readonly ContentBuilderOptions _contentBuilderOptions;
-	private readonly IUrlSegmentGenerator _urlSegmentGenerator;
-	private bool _buildContent = false;
-	private bool disposedValue;
+    private readonly IContentRepository _contentRepository;
+    private readonly IContentBuilderManager _contentBuilderManager;
+    private readonly IBlobFactory _blobFactory;
+    private readonly ContentAssetHelper _contentAssetHelper;
+    private readonly ContentBuilderOptions _contentBuilderOptions;
+    private readonly IUrlSegmentGenerator _urlSegmentGenerator;
+    private bool _buildContent = false;
+    private bool disposedValue;
 
-	#endregion
+    #endregion
 
-	#region Constructor
+    #region Constructor
 
-	public ContentBuilder(
-		IContentRepository contentRepository,
-		IContentBuilderManager contentBuilderManager,
-		ContentBuilderOptions contentBuilderOptions,
-		IBlobFactory blobFactory,
-		ContentAssetHelper contentAssetHelper,
-		IUrlSegmentGenerator urlSegmentGenerator)
-	{
-		_contentRepository = contentRepository;
-		_contentBuilderManager = contentBuilderManager;
-		_contentBuilderOptions = contentBuilderOptions;
-		_blobFactory = blobFactory;
-		_contentAssetHelper = contentAssetHelper;
-		_urlSegmentGenerator = urlSegmentGenerator;
+    public ContentBuilder(
+        IContentRepository contentRepository,
+        IContentBuilderManager contentBuilderManager,
+        ContentBuilderOptions contentBuilderOptions,
+        IBlobFactory blobFactory,
+        ContentAssetHelper contentAssetHelper,
+        IUrlSegmentGenerator urlSegmentGenerator)
+    {
+        _contentRepository = contentRepository;
+        _contentBuilderManager = contentBuilderManager;
+        _contentBuilderOptions = contentBuilderOptions;
+        _blobFactory = blobFactory;
+        _contentAssetHelper = contentAssetHelper;
+        _urlSegmentGenerator = urlSegmentGenerator;
 
-		ApplyOptions();
-		_contentBuilderManager.SetOrCreateSiteContext();
-	}
+        ApplyOptions();
+        _contentBuilderManager.SetOrCreateSiteContext();
+    }
 
-	#endregion
+    #endregion
 
-	#region Public methods
+    #region Public methods
 
-	public IAssetsBuilder UseAssets(ContentReference? root = null)
-	{
-		if (_buildContent)
-			return new AssetsBuilder(root ?? ContentReference.GlobalBlockFolder, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _blobFactory);
+    public IAssetsBuilder UseAssets(ContentReference? root = null)
+    {
+        if (_buildContent)
+            return new AssetsBuilder(root ?? ContentReference.GlobalBlockFolder, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _blobFactory);
 
-		return AssetsBuilder.Empty;
-	}
+        return AssetsBuilder.Empty;
+    }
 
-	public IPagesBuilder UsePages(ContentReference? root = null)
-	{
-		if (_buildContent)
-			return new PagesBuilder(root ?? ContentReference.RootPage, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _contentAssetHelper, _urlSegmentGenerator);
+    public IPagesBuilder UsePages(ContentReference? root = null)
+    {
+        if (_buildContent)
+            return new PagesBuilder(root ?? ContentReference.RootPage, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _contentAssetHelper, _urlSegmentGenerator);
 
-		return PagesBuilder.Empty;
-	}
+        return PagesBuilder.Empty;
+    }
 
-	#endregion
+    #endregion
 
-	#region Private methods
+    #region Private methods
 
-	private void ApplyOptions()
-	{
-		switch (_contentBuilderOptions.BuildMode)
-		{
-			case BuildMode.Append:
-				_buildContent = true;
-				break;
-			case BuildMode.Overwrite:
-				_buildContent = true;
-				break;
-			case BuildMode.OnlyIfEmpty:
-				_buildContent = !_contentBuilderManager.SiteExists;
-				break;
-			default:
-				break;
-		}
+    private void ApplyOptions()
+    {
+        switch (_contentBuilderOptions.BuildMode)
+        {
+            case BuildMode.Append:
+                _buildContent = true;
+                break;
+            case BuildMode.Overwrite:
+                _buildContent = true;
+                break;
+            case BuildMode.OnlyIfEmpty:
+                _buildContent = !_contentBuilderManager.SiteExists;
+                break;
+            default:
+                break;
+        }
 
-		if (!_buildContent)
-			return;
+        if (!_buildContent)
+            return;
 
-		_contentBuilderManager.ApplyDefaultLanguage();
+        _contentBuilderManager.ApplyDefaultLanguage();
 
-		if (_contentBuilderOptions.CreateDefaultRoles)
-			_contentBuilderManager.CreateDefaultRoles(new Dictionary<string, AccessLevel>
-			{
-				{ Roles.WebEditors, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit | AccessLevel.Delete | AccessLevel.Publish },
-				{ Roles.WebAdmins, AccessLevel.FullAccess }
-			});
+        if (_contentBuilderOptions.RootRolesAccessLevel is not null && _contentBuilderOptions.RootRolesAccessLevel.Any())
+            _contentBuilderManager.CreateDefaultRoles(_contentBuilderOptions.RootRolesAccessLevel);
 
-		_contentBuilderManager.CreateRoles(_contentBuilderOptions.Roles);
-		_contentBuilderManager.CreateUsers(_contentBuilderOptions.Users);
-	}
+        _contentBuilderManager.CreateRoles(_contentBuilderOptions.SiteRolesAccessLevel);
+        _contentBuilderManager.CreateUsers(_contentBuilderOptions.Users);
+    }
 
-	#endregion
+    #endregion
 
-	#region IDisposable implementation
+    #region IDisposable implementation
 
-	protected virtual void Dispose(bool disposing)
-	{
-		if (!disposedValue)
-		{
-			if (disposing)
-			{
-				PropertyHelpers.TypeProperties.Clear();
-				SiteDefinition.Current = SiteDefinition.Empty;
-			}
-			// TODO: free unmanaged resources (unmanaged objects) and override finalizer
-			// TODO: set large fields to null
-			disposedValue = true;
-		}
-	}
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                PropertyHelpers.TypeProperties.Clear();
+                SiteDefinition.Current = SiteDefinition.Empty;
+            }
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            disposedValue = true;
+        }
+    }
 
-	// // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-	// ~ContentBuilder()
-	// {
-	//     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-	//     Dispose(disposing: false);
-	// }
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~ContentBuilder()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
 
-	public void Dispose()
-	{
-		// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-		Dispose(true);
-		GC.SuppressFinalize(this);
-	}
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
-	#endregion
+    #endregion
 }
