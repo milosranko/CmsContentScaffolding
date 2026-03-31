@@ -5,6 +5,7 @@ using EPiServer;
 using EPiServer.Core;
 using EPiServer.Framework.Blobs;
 using EPiServer.Web;
+using Microsoft.Extensions.Options;
 
 namespace CmsContentScaffolding.Optimizely.Builders;
 
@@ -16,7 +17,7 @@ internal class ContentBuilder : IContentBuilder
     private readonly IContentBuilderManager _contentBuilderManager;
     private readonly IBlobFactory _blobFactory;
     private readonly ContentAssetHelper _contentAssetHelper;
-    private readonly ContentBuilderOptions _contentBuilderOptions;
+    private readonly IOptionsMonitor<ContentBuilderOptions> _contentBuilderOptions;
     private readonly IUrlSegmentGenerator _urlSegmentGenerator;
     private bool _buildContent = false;
     private bool disposedValue;
@@ -28,7 +29,7 @@ internal class ContentBuilder : IContentBuilder
     public ContentBuilder(
         IContentRepository contentRepository,
         IContentBuilderManager contentBuilderManager,
-        ContentBuilderOptions contentBuilderOptions,
+        IOptionsMonitor<ContentBuilderOptions> contentBuilderOptions,
         IBlobFactory blobFactory,
         ContentAssetHelper contentAssetHelper,
         IUrlSegmentGenerator urlSegmentGenerator)
@@ -39,9 +40,6 @@ internal class ContentBuilder : IContentBuilder
         _blobFactory = blobFactory;
         _contentAssetHelper = contentAssetHelper;
         _urlSegmentGenerator = urlSegmentGenerator;
-
-        ApplyOptions();
-        _contentBuilderManager.SetOrCreateSiteContext();
     }
 
     #endregion
@@ -51,7 +49,7 @@ internal class ContentBuilder : IContentBuilder
     public IAssetsBuilder UseAssets(ContentReference? root = null)
     {
         if (_buildContent)
-            return new AssetsBuilder(root ?? ContentReference.GlobalBlockFolder, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _blobFactory);
+            return new AssetsBuilder(root ?? SiteDefinition.Current.GlobalAssetsRoot, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _blobFactory);
 
         return AssetsBuilder.Empty;
     }
@@ -59,9 +57,18 @@ internal class ContentBuilder : IContentBuilder
     public IPagesBuilder UsePages(ContentReference? root = null)
     {
         if (_buildContent)
-            return new PagesBuilder(root ?? ContentReference.RootPage, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _contentAssetHelper, _urlSegmentGenerator);
+            return new PagesBuilder(root ?? SiteDefinition.Current.RootPage, _contentRepository, _contentBuilderManager, _contentBuilderOptions, _contentAssetHelper, _urlSegmentGenerator);
 
         return PagesBuilder.Empty;
+    }
+
+    public void InitSite(ContentBuilderOptions? options = null)
+    {
+        if (options is not null)
+            _contentBuilderOptions.CurrentValue.ApplyFrom(options);
+
+        ApplyOptions();
+        SiteDefinition.Current = _contentBuilderManager.GetOrCreateSite();
     }
 
     #endregion
@@ -70,7 +77,7 @@ internal class ContentBuilder : IContentBuilder
 
     private void ApplyOptions()
     {
-        switch (_contentBuilderOptions.BuildMode)
+        switch (_contentBuilderOptions.CurrentValue.BuildMode)
         {
             case BuildMode.Append:
                 _buildContent = true;
@@ -90,11 +97,11 @@ internal class ContentBuilder : IContentBuilder
 
         _contentBuilderManager.ApplyDefaultLanguage();
 
-        if (_contentBuilderOptions.RootRolesAccessLevel is not null && _contentBuilderOptions.RootRolesAccessLevel.Any())
-            _contentBuilderManager.CreateDefaultRoles(_contentBuilderOptions.RootRolesAccessLevel);
+        if (_contentBuilderOptions.CurrentValue.RootRolesAccessLevel is not null && _contentBuilderOptions.CurrentValue.RootRolesAccessLevel.Any())
+            _contentBuilderManager.CreateDefaultRoles(_contentBuilderOptions.CurrentValue.RootRolesAccessLevel);
 
-        _contentBuilderManager.CreateRoles(_contentBuilderOptions.SiteRolesAccessLevel);
-        _contentBuilderManager.CreateUsers(_contentBuilderOptions.Users);
+        _contentBuilderManager.CreateRoles(_contentBuilderOptions.CurrentValue.SiteRolesAccessLevel);
+        _contentBuilderManager.CreateUsers(_contentBuilderOptions.CurrentValue.Users);
     }
 
     #endregion
@@ -108,7 +115,7 @@ internal class ContentBuilder : IContentBuilder
             if (disposing)
             {
                 PropertyHelpers.TypeProperties.Clear();
-                SiteDefinition.Current = SiteDefinition.Empty;
+                //SiteDefinition.Current = SiteDefinition.Empty;
             }
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null

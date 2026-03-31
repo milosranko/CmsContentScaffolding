@@ -7,10 +7,12 @@ using CmsContentScaffolding.Optimizely.Tests.Models.Media;
 using CmsContentScaffolding.Optimizely.Tests.Models.Pages;
 using CmsContentScaffolding.Shared.Resources;
 using EPiServer;
-using EPiServer.Authorization;
 using EPiServer.Core;
 using EPiServer.Security;
+using EPiServer.ServiceLocation;
+using EPiServer.Web;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using static CmsContentScaffolding.Optimizely.Tests.Constants.StringConstants;
 
@@ -20,36 +22,15 @@ internal static class ApplicationBuilderExtensions
 {
     public static IApplicationBuilder AddCmsContent(this IApplicationBuilder app)
     {
-        app.UseCmsContentScaffolding(
-            builderOptions: o =>
-            {
-                o.SiteName = "Site 1";
-                o.SiteHost = Site1HostUrl;
-                o.Language = CultureInfo.GetCultureInfo("sr");
-                o.StartPageType = typeof(StartPage);
-                o.BuildMode = BuildMode.Append;
-                o.PublishContent = true;
-                o.RootRolesAccessLevel = new Dictionary<string, AccessLevel>
-                {
-                    { Roles.CmsEditors, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit | AccessLevel.Publish },
-                    { Roles.CmsAdmins, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit | AccessLevel.Publish | AccessLevel.Administer | AccessLevel.FullAccess }
-                };
-                o.SiteRolesAccessLevel = new Dictionary<string, AccessLevel>
-                {
-                    { Site1EditorsRole, AccessLevel.Read | AccessLevel.Create | AccessLevel.Edit }
-                };
-                o.Users =
-                [
-                    new("Site1User", "Site1User@test.com", TestUserPassword, [Site1EditorsRole])
-                ];
-            },
+        app.UseCmsContentScaffolding<StartPage>(
             builder: b =>
             {
                 var teaser2Ref = ContentReference.EmptyReference;
                 var teaser3Ref = ContentReference.EmptyReference;
                 var articlePageRef = ContentReference.EmptyReference;
+                var siteDefinitionRepository = ServiceLocator.Current.GetRequiredService<ISiteDefinitionRepository>();
 
-                b.UseAssets(ContentReference.SiteBlockFolder)
+                b.UseAssets(siteDefinitionRepository.Get("Site 1").SiteAssetsRoot)
                 .WithFolder("Folder 1", l1 =>
                 {
                     l1

@@ -45,7 +45,7 @@ public class UnitTests
                 .AddSingleton<IHttpContextFactory, DefaultHttpContextFactory>()
                 .AddCmsAspNetIdentity<ApplicationUser>()
                 .AddCms()
-                .AddCmsContentScaffolding();
+                .AddCmsContentScaffolding(context.Configuration);
 
                 Globals.Services = services.BuildServiceProvider();
 

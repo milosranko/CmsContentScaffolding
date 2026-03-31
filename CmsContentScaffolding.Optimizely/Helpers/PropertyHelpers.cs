@@ -7,6 +7,7 @@ using EPiServer.Security;
 using EPiServer.ServiceLocation;
 using EPiServer.Web;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace CmsContentScaffolding.Optimizely.Helpers;
@@ -15,7 +16,7 @@ public static class PropertyHelpers
 {
     #region Private fields
 
-    private static readonly Injected<ContentBuilderOptions> _options = default;
+    private static readonly Injected<IOptionsMonitor<ContentBuilderOptions>> _options = default;
     private static readonly Injected<IContentRepository> _contentRepository = default;
     private static readonly Injected<IBlobFactory> _blobFactory = default;
 
@@ -48,7 +49,7 @@ public static class PropertyHelpers
         image.BinaryData = blob;
         image.Name = name;
 
-        return _contentRepository.Service.Save(image, _options.Service.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        return _contentRepository.Service.Save(image, _options.Service.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
     }
 
     public static void InitProperties<T>(T content) where T : IContentData

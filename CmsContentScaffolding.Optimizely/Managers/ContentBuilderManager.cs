@@ -9,6 +9,7 @@ using EPiServer.Security;
 using EPiServer.ServiceLocation;
 using EPiServer.Shell.Security;
 using EPiServer.Web;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 
 namespace CmsContentScaffolding.Optimizely.Managers;
@@ -23,20 +24,20 @@ internal class ContentBuilderManager : IContentBuilderManager
     private readonly IContentLoader _contentLoader;
     private readonly ILanguageBranchRepository _languageBranchRepository;
     private readonly IContentTypeRepository _contentTypeRepository;
-    private readonly ContentBuilderOptions _options;
+    private readonly IOptionsMonitor<ContentBuilderOptions> _options;
 
     #endregion
 
     #region Public properties
 
-    public ContentReference CurrentAssetsReference { get; set; } = ContentReference.EmptyReference;
+    public static ContentReference CurrentAssetsReference { get; set; } = ContentReference.GlobalBlockFolder;
 
     public bool SiteExists =>
         _siteDefinitionRepository
         .List()
         .Where(x =>
-            x.Name.Equals(_options.SiteName) &&
-            x.Hosts.Any(y => y.Language.Equals(_options.Language)))
+            x.Name.Equals(_options.CurrentValue.SiteName) &&
+            x.Hosts.Any(y => y.Language.Equals(_options.CurrentValue.Language)))
         .Any();
 
     #endregion
@@ -46,7 +47,7 @@ internal class ContentBuilderManager : IContentBuilderManager
     public ContentBuilderManager(
         ISiteDefinitionRepository siteDefinitionRepository,
         IContentRepository contentRepository,
-        ContentBuilderOptions options,
+        IOptionsMonitor<ContentBuilderOptions> options,
         IContentLoader contentLoader,
         ILanguageBranchRepository languageBranchRepository,
         IContentSecurityRepository contentSecurityRepository,
@@ -65,23 +66,22 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     #region Public methods
 
-    public void SetOrCreateSiteContext()
+    public SiteDefinition GetOrCreateSite()
     {
         var existingSite = _siteDefinitionRepository
             .List()
-            .SingleOrDefault(x => x.Name.Equals(_options.SiteName) && x.Hosts.Any(x => x.Language.Equals(_options.Language)));
+            .SingleOrDefault(x => x.Name.Equals(_options.CurrentValue.SiteName) && x.Hosts.Any(x => x.Language.Equals(_options.CurrentValue.Language)));
 
         if (existingSite is not null)
         {
-            SiteDefinition.Current = existingSite;
-            return;
+            return existingSite;
         }
 
         var startPage = TryCreateStartPage();
-        var siteUri = new Uri(_options.SiteHost);
+        var siteUri = new Uri(_options.CurrentValue.SiteHost);
         var siteDefinition = new SiteDefinition
         {
-            Name = _options.SiteName,
+            Name = _options.CurrentValue.SiteName,
             StartPage = startPage,
             SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
             SiteUrl = siteUri,
@@ -90,7 +90,7 @@ internal class ContentBuilderManager : IContentBuilderManager
                 new()
                 {
                     Name = siteUri.Authority,
-                    Language = _options.Language,
+                    Language = _options.CurrentValue.Language,
                     Type = HostDefinitionType.Primary,
                     UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
                 }
@@ -98,24 +98,25 @@ internal class ContentBuilderManager : IContentBuilderManager
         };
 
         _siteDefinitionRepository.Save(siteDefinition);
-        SiteDefinition.Current = siteDefinition;
+
+        return siteDefinition;
     }
 
     public void SetStartPageSecurity(ContentReference pageRef)
     {
-        if (_options.SiteRolesAccessLevel is null || !_options.SiteRolesAccessLevel.Any())
+        if (_options.CurrentValue.SiteRolesAccessLevel is null || !_options.CurrentValue.SiteRolesAccessLevel.Any())
             return;
 
         if (_contentSecurityRepository.Get(SiteDefinition.Current.StartPage).CreateWritableClone() is IContentSecurityDescriptor startPageSecurity)
         {
-            foreach (var role in _options.SiteRolesAccessLevel)
+            foreach (var role in _options.CurrentValue.SiteRolesAccessLevel)
                 if (startPageSecurity.Entries.Any(x => x.Name.Equals(role)))
                     return;
 
             if (startPageSecurity.IsInherited)
                 startPageSecurity.ToLocal();
 
-            foreach (var role in _options.SiteRolesAccessLevel)
+            foreach (var role in _options.CurrentValue.SiteRolesAccessLevel)
                 startPageSecurity.AddEntry(new AccessControlEntry(role.Key, role.Value, SecurityEntityType.Role));
 
             _contentSecurityRepository.Save(startPageSecurity.ContentLink, startPageSecurity, SecuritySaveType.Replace);
@@ -125,8 +126,8 @@ internal class ContentBuilderManager : IContentBuilderManager
     public void ApplyDefaultLanguage()
     {
         DisableLanguage("sv");
-        CreateAndEnableLanguage(_options.Language);
-        AppendLanguageToExistingLanguages(ContentReference.RootPage, _options.Language);
+        CreateAndEnableLanguage(_options.CurrentValue.Language);
+        AppendLanguageToExistingLanguages(ContentReference.RootPage, _options.CurrentValue.Language);
     }
 
     public void CreateAndEnableLanguage(CultureInfo culture)
@@ -258,7 +259,7 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public ContentReference CreateItem<T>(string? name = default, string? suffix = default, Action<T>? options = default) where T : IContentData
     {
-        var content = _contentRepository.GetDefault<T>(CurrentAssetsReference, _options.Language);
+        var content = _contentRepository.GetDefault<T>(CurrentAssetsReference, _options.CurrentValue.Language);
 
         PropertyHelpers.InitProperties(content);
         options?.Invoke(content);
@@ -269,7 +270,7 @@ internal class ContentBuilderManager : IContentBuilderManager
         if (!ContentReference.IsNullOrEmpty(iContent.ContentLink))
             return iContent.ContentLink;
 
-        return _contentRepository.Save(iContent, _options.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        return _contentRepository.Save(iContent, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
     }
 
     #endregion
@@ -278,14 +279,14 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     private ContentReference TryCreateStartPage()
     {
-        if (_options.StartPageType == null)
+        if (_options.CurrentValue.StartPageType == null)
             return ContentReference.RootPage;
 
-        var startPageType = _contentTypeRepository.Load(_options.StartPageType);
-        var startPage = _contentRepository.GetDefault<PageData>(ContentReference.RootPage, startPageType.ID, _options.Language);
-        startPage.Name = _options.StartPageType.Name;
+        var startPageType = _contentTypeRepository.Load(_options.CurrentValue.StartPageType);
+        var startPage = _contentRepository.GetDefault<PageData>(ContentReference.RootPage, startPageType.ID, _options.CurrentValue.Language);
+        startPage.Name = _options.CurrentValue.StartPageType.Name;
 
-        return _contentRepository.Save(startPage, _options.PublishContent ? SaveAction.SkipValidation | SaveAction.Publish : SaveAction.SkipValidation | SaveAction.Default, AccessLevel.NoAccess);
+        return _contentRepository.Save(startPage, _options.CurrentValue.PublishContent ? SaveAction.SkipValidation | SaveAction.Publish : SaveAction.SkipValidation | SaveAction.Default, AccessLevel.NoAccess);
     }
 
     private ContentReference GetOrCreateSiteAssetsRoot(ContentReference pageRef)
@@ -294,7 +295,7 @@ internal class ContentBuilderManager : IContentBuilderManager
             return ContentReference.GlobalBlockFolder;
 
         var siteRoot = _contentRepository.GetDefault<ContentFolder>(pageRef);
-        siteRoot.Name = _options.SiteName;
+        siteRoot.Name = _options.CurrentValue.SiteName;
 
         return _contentRepository.Save(siteRoot, AccessLevel.NoAccess);
     }
@@ -304,7 +305,7 @@ internal class ContentBuilderManager : IContentBuilderManager
         var availableLanguages = _languageBranchRepository.ListAll();
         var lang = availableLanguages.SingleOrDefault(x => x.LanguageID.Equals(languageId, StringComparison.OrdinalIgnoreCase));
 
-        if (lang != null && !_options.Language.TwoLetterISOLanguageName.Equals(languageId, StringComparison.OrdinalIgnoreCase))
+        if (lang != null && !_options.CurrentValue.Language.TwoLetterISOLanguageName.Equals(languageId, StringComparison.OrdinalIgnoreCase))
             _languageBranchRepository.Disable(lang.Culture);
     }
 

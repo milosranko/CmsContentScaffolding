@@ -1,6 +1,7 @@
 ﻿using CmsContentScaffolding.Optimizely.Models;
 using EPiServer.Core;
 using EPiServer.Security;
+using EPiServer.Web;
 using System.Globalization;
 
 namespace CmsContentScaffolding.Optimizely.Interfaces;
@@ -11,8 +12,7 @@ namespace CmsContentScaffolding.Optimizely.Interfaces;
 internal interface IContentBuilderManager
 {
     bool SiteExists { get; }
-    ContentReference CurrentAssetsReference { get; set; }
-    void SetOrCreateSiteContext();
+    SiteDefinition GetOrCreateSite();
     void SetStartPageSecurity(ContentReference pageRef);
     void ApplyDefaultLanguage();
     void CreateAndEnableLanguage(CultureInfo culture);

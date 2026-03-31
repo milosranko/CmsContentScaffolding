@@ -1,11 +1,13 @@
 ﻿using CmsContentScaffolding.Optimizely.Helpers;
 using CmsContentScaffolding.Optimizely.Interfaces;
+using CmsContentScaffolding.Optimizely.Managers;
 using CmsContentScaffolding.Optimizely.Models;
 using EPiServer;
 using EPiServer.Core;
 using EPiServer.DataAccess;
 using EPiServer.Security;
 using EPiServer.Web;
+using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 
@@ -20,7 +22,7 @@ internal class PagesBuilder : IPagesBuilder
     private readonly IContentBuilderManager _contentBuilderManager;
     private readonly ContentAssetHelper _contentAssetHelper;
     private readonly IUrlSegmentGenerator _urlSegmentGenerator;
-    private readonly ContentBuilderOptions _options;
+    private readonly IOptionsMonitor<ContentBuilderOptions> _options;
     private readonly bool _stop = false;
 
     #endregion
@@ -39,7 +41,7 @@ internal class PagesBuilder : IPagesBuilder
         ContentReference parent,
         IContentRepository contentRepository,
         IContentBuilderManager contentBuilderManager,
-        ContentBuilderOptions options,
+        IOptionsMonitor<ContentBuilderOptions> options,
         ContentAssetHelper contentAssetHelper,
         IUrlSegmentGenerator urlSegmentGenerator)
     {
@@ -104,7 +106,7 @@ internal class PagesBuilder : IPagesBuilder
         if (existingPage is null)
         {
             page.URLSegment = _urlSegmentGenerator.Create(page.Name);
-            contentReference = _contentRepository.Save(page, _options.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+            contentReference = _contentRepository.Save(page, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
         }
         else
         {
@@ -164,7 +166,7 @@ internal class PagesBuilder : IPagesBuilder
             if (existingPage is null)
             {
                 page.URLSegment = _urlSegmentGenerator.Create(page.Name);
-                contentReferences[i] = _contentRepository.Save(page, _options.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+                contentReferences[i] = _contentRepository.Save(page, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
             }
             else
             {
@@ -184,30 +186,30 @@ internal class PagesBuilder : IPagesBuilder
     private T? TryGetExistingPage<T>(string pageName, bool isStartPage) where T : PageData
     {
         if (isStartPage &&
-            _options.StartPageType != null &&
-            _options.StartPageType.Equals(typeof(T)))
+            _options.CurrentValue.StartPageType != null &&
+            _options.CurrentValue.StartPageType.Equals(typeof(T)))
             return _contentRepository
-                .GetChildren<T>(_parent, _options.Language)
-                .SingleOrDefault(x => x.Name.Equals(_options.StartPageType.Name))
+                .GetChildren<T>(_parent, _options.CurrentValue.Language)
+                .SingleOrDefault(x => x.Name.Equals(_options.CurrentValue.StartPageType.Name))
                 ?? _contentRepository
-                .GetChildren<T>(_parent, _options.Language)
+                .GetChildren<T>(_parent, _options.CurrentValue.Language)
                 .SingleOrDefault(x => x.Name.Equals(pageName));
 
         return _contentRepository
-            .GetChildren<T>(_parent, _options.Language)
+            .GetChildren<T>(_parent, _options.CurrentValue.Language)
             .FirstOrDefault(x => x.Name.Equals(pageName));
     }
 
     private void UpdateExistingPage<T>(T existingPage, bool isStartPage, Action<T>? value) where T : PageData
     {
-        if (!isStartPage && _options.BuildMode != BuildMode.Overwrite)
+        if (!isStartPage && _options.CurrentValue.BuildMode != BuildMode.Overwrite)
             return;
 
         var existingPageWritable = (T)existingPage.CreateWritableClone();
         PropertyHelpers.InitProperties(existingPageWritable);
 
         var assetsFolder = _contentAssetHelper.GetOrCreateAssetFolder(existingPageWritable.ContentLink);
-        _contentBuilderManager.CurrentAssetsReference = assetsFolder.ContentLink;
+        ContentBuilderManager.CurrentAssetsReference = assetsFolder.ContentLink;
 
         value?.Invoke(existingPageWritable);
 
@@ -217,13 +219,13 @@ internal class PagesBuilder : IPagesBuilder
 
     private T CreatePageDraftAndInvoke<T>(Action<T>? value = null, string? nameSuffix = default) where T : PageData
     {
-        var page = _contentRepository.GetDefault<T>(_parent, _options.Language);
+        var page = _contentRepository.GetDefault<T>(_parent, _options.CurrentValue.Language);
         PropertyHelpers.InitProperties(page);
         page.Name = Constants.TempPageName;
 
         _contentRepository.Save(page, SaveAction.SkipValidation | SaveAction.Default, AccessLevel.NoAccess);
         var assetsFolder = _contentAssetHelper.GetOrCreateAssetFolder(page.ContentLink);
-        _contentBuilderManager.CurrentAssetsReference = assetsFolder.ContentLink;
+        ContentBuilderManager.CurrentAssetsReference = assetsFolder.ContentLink;
 
         value?.Invoke(page);
         _contentBuilderManager.SetContentName<T>(page, default, nameSuffix);
@@ -261,7 +263,7 @@ internal class PagesBuilder : IPagesBuilder
         var translatedPage = _contentRepository.CreateLanguageBranch<T>(contentReference, translationLanguage);
         translation?.Invoke(translatedPage);
 
-        _contentRepository.Save(translatedPage, _options.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        _contentRepository.Save(translatedPage, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
     }
 
     #endregion

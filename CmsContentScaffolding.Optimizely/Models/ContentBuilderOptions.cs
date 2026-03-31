@@ -6,7 +6,7 @@ namespace CmsContentScaffolding.Optimizely.Models;
 /// <summary>
 /// Default options for the builder
 /// </summary>
-public record ContentBuilderOptions
+public class ContentBuilderOptions
 {
     /// <summary>
     /// Set language for the builder, default is English
@@ -44,4 +44,17 @@ public record ContentBuilderOptions
     /// Define new users thah will have an access to site instance
     /// </summary>
     public IList<UserModel>? Users { get; set; }
+
+    public void ApplyFrom(ContentBuilderOptions source)
+    {
+        Language = source.Language;
+        SiteHost = source.SiteHost;
+        SiteName = source.SiteName;
+        StartPageType = source.StartPageType;
+        BuildMode = source.BuildMode;
+        PublishContent = source.PublishContent;
+        RootRolesAccessLevel = source.RootRolesAccessLevel;
+        SiteRolesAccessLevel = source.SiteRolesAccessLevel;
+        Users = source.Users;
+    }
 }
