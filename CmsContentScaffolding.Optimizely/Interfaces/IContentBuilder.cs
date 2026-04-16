@@ -8,7 +8,7 @@ namespace CmsContentScaffolding.Optimizely.Interfaces;
 /// </summary>
 public interface IContentBuilder : IDisposable
 {
-    void InitSite(ContentBuilderOptions? options = null);
+    void Init(ContentBuilderOptions? options = null);
     /// <summary>
     /// Use assets
     /// </summary>

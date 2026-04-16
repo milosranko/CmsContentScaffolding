@@ -44,6 +44,10 @@ public class ContentBuilderOptions
     /// Define new users thah will have an access to site instance
     /// </summary>
     public IList<UserModel>? Users { get; set; }
+    /// <summary>
+    /// Replaces existing primary site if it already exists. Use with caution, as it will override the existing site and all its content. Usefull when transfering DB from one environment to another.
+    /// </summary>
+    public bool ReplaceExistingPrimarySite { get; set; } = false;
 
     public void ApplyFrom(ContentBuilderOptions source)
     {

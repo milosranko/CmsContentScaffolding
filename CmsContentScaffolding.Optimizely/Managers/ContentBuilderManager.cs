@@ -68,9 +68,33 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public SiteDefinition GetOrCreateSite()
     {
+        var siteUri = new Uri(_options.CurrentValue.SiteHost);
         var existingSite = _siteDefinitionRepository
             .List()
-            .SingleOrDefault(x => x.Name.Equals(_options.CurrentValue.SiteName) && x.Hosts.Any(x => x.Language.Equals(_options.CurrentValue.Language)));
+            .SingleOrDefault(x => x.Hosts.Any(x => x.Name.Equals(siteUri.Authority)));
+
+        if (_options.CurrentValue.ReplaceExistingPrimarySite)
+        {
+            var primarySite = _siteDefinitionRepository.List().Where(x => x.Hosts.Any(y => y.Type == HostDefinitionType.Primary)).SingleOrDefault();
+            if (primarySite != null)
+            {
+                var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
+                primaryHost.Type = HostDefinitionType.Undefined;
+
+                primarySite.Hosts.Remove(primaryHost);
+                primarySite.Hosts.Add(new()
+                {
+                    Name = siteUri.Authority,
+                    Language = _options.CurrentValue.Language,
+                    Type = HostDefinitionType.Primary,
+                    UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                });
+
+                _siteDefinitionRepository.Save(primarySite);
+
+                existingSite = primarySite;
+            }
+        }
 
         if (existingSite is not null)
         {
@@ -78,7 +102,6 @@ internal class ContentBuilderManager : IContentBuilderManager
         }
 
         var startPage = TryCreateStartPage();
-        var siteUri = new Uri(_options.CurrentValue.SiteHost);
         var siteDefinition = new SiteDefinition
         {
             Name = _options.CurrentValue.SiteName,

@@ -62,7 +62,7 @@ internal class ContentBuilder : IContentBuilder
         return PagesBuilder.Empty;
     }
 
-    public void InitSite(ContentBuilderOptions? options = null)
+    public void Init(ContentBuilderOptions? options = null)
     {
         if (options is not null)
             _contentBuilderOptions.CurrentValue.ApplyFrom(options);

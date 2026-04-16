@@ -17,7 +17,7 @@ public static class StartupExtensions
     public static IServiceCollection AddCmsContentScaffolding(this IServiceCollection services, IConfiguration configuration)
     {
         return services
-            .Configure<ContentBuilderOptions>(x => configuration.GetSection(SectionName).Get<ContentBuilderOptions>())
+            .ConfigureOptions<ContentBuilderOptionsSetup>()
             .AddTransient<IContentBuilderManager, ContentBuilderManager>()
             .AddTransient<IContentBuilder, ContentBuilder>();
     }
@@ -29,21 +29,18 @@ public static class StartupExtensions
     {
         var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
 
-        if (builderOptions is not null)
-        {
-            builderOptions.Invoke(options.CurrentValue);
-        }
-        else
-        {
-            var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-            var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
+        builderOptions?.Invoke(options.CurrentValue);
+        //else
+        //{
+        //    var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
+        //    var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
 
-            if (contentBuilderOptionsFromConfiguration is not null)
-                options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
-        }
+        //    if (contentBuilderOptionsFromConfiguration is not null)
+        //        options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
+        //}
 
         using var contentBuilder = app.ApplicationServices.GetRequiredService<IContentBuilder>();
-        contentBuilder.InitSite();
+        contentBuilder.Init();
         builder.Invoke(contentBuilder);
 
         return app;
@@ -55,11 +52,11 @@ public static class StartupExtensions
         Action<ContentBuilderOptions>? builderOptions = null) where TStartPage : PageData
     {
         var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
-        var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-        var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
+        //var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
+        //var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
 
-        if (contentBuilderOptionsFromConfiguration is not null)
-            options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
+        //if (contentBuilderOptionsFromConfiguration is not null)
+        //    options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
 
         options.CurrentValue.StartPageType = typeof(TStartPage);
         builderOptions?.Invoke(options.CurrentValue);
@@ -68,7 +65,7 @@ public static class StartupExtensions
             return app;
 
         using var contentBuilder = app.ApplicationServices.GetRequiredService<IContentBuilder>();
-        contentBuilder.InitSite();
+        contentBuilder.Init();
         builder.Invoke(contentBuilder);
 
         return app;
