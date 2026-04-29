@@ -51,23 +51,21 @@ public class StartPage : PageBaseSeo
         GroupName = SystemTabNames.Content,
         Order = 100)]
     [Required]
-    public virtual string Heading { get; set; }
+    public virtual string? Heading { get; set; }
 
     [CultureSpecific]
     [Display(
         GroupName = SystemTabNames.Content,
         Order = 110)]
     [UIHint(UIHint.Textarea, PresentationLayer.Edit)]
-    public virtual string LeadText { get; set; }
+    public virtual string? LeadText { get; set; }
 
     [CultureSpecific]
     [Display(
             GroupName = SystemTabNames.Content,
             Order = 120)]
-    [AllowedTypes(new[] {
-            typeof(TeaserBlock)
-        })]
-    public virtual ContentArea MainContentArea { get; set; }
+    [AllowedTypes([typeof(TeaserBlock)])]
+    public virtual ContentArea? MainContentArea { get; set; }
 
     #endregion
 

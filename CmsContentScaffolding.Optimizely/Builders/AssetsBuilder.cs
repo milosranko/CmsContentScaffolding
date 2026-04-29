@@ -98,7 +98,7 @@ internal class AssetsBuilder : IAssetsBuilder
         if (existingContent is null)
         {
             _contentBuilderManager.SetContentName<T>(content);
-            contentReference = _contentRepository.Save(content, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+            contentReference = _contentRepository.Save(content, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
         }
         else
         {
@@ -136,7 +136,7 @@ internal class AssetsBuilder : IAssetsBuilder
         {
             var content = _contentRepository.GetDefault<ContentFolder>(contentReference, _options.CurrentValue.Language);
             content.Name = name;
-            contentReference = _contentRepository.Save(content, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+            contentReference = _contentRepository.Save(content, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
         }
         else
         {
@@ -187,7 +187,7 @@ internal class AssetsBuilder : IAssetsBuilder
             media.BinaryData = blob;
         }
 
-        contentReference = _contentRepository.Save(media, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        contentReference = _contentRepository.Save(media, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
 
         return this;
     }
@@ -222,7 +222,7 @@ internal class AssetsBuilder : IAssetsBuilder
         var iContent = (IContent)block;
 
         _contentBuilderManager.SetContentName<T>(iContent, name);
-        contentReference = _contentRepository.Save(iContent, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        contentReference = _contentRepository.Save(iContent, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
 
         CreateTranslation(contentReference, translationLanguage, translatedName, translation);
 
@@ -242,7 +242,7 @@ internal class AssetsBuilder : IAssetsBuilder
         var iContent = (IContent)translatedBlock;
 
         _contentBuilderManager.SetContentName<T>(iContent, translatedName);
-        _ = _contentRepository.Save(iContent, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        _ = _contentRepository.Save(iContent, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     #endregion

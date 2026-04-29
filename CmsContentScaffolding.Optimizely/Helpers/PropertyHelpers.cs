@@ -49,7 +49,7 @@ public static class PropertyHelpers
         image.BinaryData = blob;
         image.Name = name;
 
-        return _contentRepository.Service.Save(image, _options.Service.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        return _contentRepository.Service.Save(image, (_options.Service.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.Service.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     public static void InitProperties<T>(T content) where T : IContentData

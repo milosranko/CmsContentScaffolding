@@ -1,3 +1,5 @@
+using CmsContentScaffolding.Optimizely.Interfaces;
+using CmsContentScaffolding.Optimizely.Models;
 using CmsContentScaffolding.Optimizely.Startup;
 using CmsContentScaffolding.Optimizely.Tests.Extensions;
 using CmsContentScaffolding.Optimizely.Tests.Models.Blocks;
@@ -15,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using static CmsContentScaffolding.Optimizely.Tests.Constants.StringConstants;
 
@@ -45,7 +48,7 @@ public class UnitTests
                 .AddSingleton<IHttpContextFactory, DefaultHttpContextFactory>()
                 .AddCmsAspNetIdentity<ApplicationUser>()
                 .AddCms()
-                .AddCmsContentScaffolding(context.Configuration);
+                .AddCmsContentScaffolding<StartPage>(context.Configuration);
 
                 Globals.Services = services.BuildServiceProvider();
 
@@ -283,6 +286,46 @@ public class UnitTests
         //Assert
         Assert.IsNotNull(page);
         Assert.IsTrue(page.Name.Equals("Start Page [SV]", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public void SkipValidation_ShouldAllowSavingPageWithMissingRequiredProperties()
+    {
+        //Arrange
+        var contentBuilder = ServiceLocator.Current.GetRequiredService<IContentBuilder>();
+        var contentLoader = ServiceLocator.Current.GetRequiredService<IContentLoader>();
+        var options = ServiceLocator.Current.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
+        var originalSkipValidation = options.CurrentValue.SkipValidation;
+        var originalBuildMode = options.CurrentValue.BuildMode;
+        var pageRef = ContentReference.EmptyReference;
+
+        //Act
+        try
+        {
+            options.CurrentValue.SkipValidation = true;
+            options.CurrentValue.BuildMode = BuildMode.Append;
+            contentBuilder.Init();
+
+            contentBuilder
+                .UsePages(ContentReference.RootPage)
+                .WithPage<StartPage>(out pageRef, p =>
+                {
+                    p.Name = "SkipValidationStartPage";
+                    // Heading is [Required] but intentionally not set
+                });
+        }
+        finally
+        {
+            options.CurrentValue.SkipValidation = originalSkipValidation;
+            options.CurrentValue.BuildMode = originalBuildMode;
+        }
+
+        //Assert
+        Assert.IsFalse(ContentReference.IsNullOrEmpty(pageRef));
+        var savedPage = contentLoader.Get<StartPage>(pageRef, Language);
+        Assert.IsNotNull(savedPage);
+        Assert.AreEqual("SkipValidationStartPage", savedPage.Name);
+        Assert.IsNull(savedPage.Heading);
     }
 
     [TestMethod]

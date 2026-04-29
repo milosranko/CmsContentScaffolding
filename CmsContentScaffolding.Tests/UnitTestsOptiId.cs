@@ -44,7 +44,7 @@ public class UnitTestsOptiId
                 .Configure<SchedulerOptions>(o => o.Enabled = false)
                 .AddSingleton<IHttpContextFactory, DefaultHttpContextFactory>()
                 .AddCms()
-                .AddCmsContentScaffolding(context.Configuration)
+                .AddCmsContentScaffolding<StartPage>(context.Configuration)
                 .AddOptimizelyIdentity();
 
                 Globals.Services = services.BuildServiceProvider();

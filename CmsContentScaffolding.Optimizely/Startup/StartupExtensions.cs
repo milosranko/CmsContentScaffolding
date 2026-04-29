@@ -14,10 +14,12 @@ public static class StartupExtensions
 {
     public const string SectionName = "CmsContentScaffolding";
 
-    public static IServiceCollection AddCmsContentScaffolding(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddCmsContentScaffolding<TStartPage>(
+        this IServiceCollection services,
+        IConfiguration configuration) where TStartPage : PageData
     {
         return services
-            .ConfigureOptions<ContentBuilderOptionsSetup>()
+            .ConfigureOptions<ContentBuilderOptionsSetup<TStartPage>>()
             .AddTransient<IContentBuilderManager, ContentBuilderManager>()
             .AddTransient<IContentBuilder, ContentBuilder>();
     }
@@ -30,14 +32,6 @@ public static class StartupExtensions
         var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
 
         builderOptions?.Invoke(options.CurrentValue);
-        //else
-        //{
-        //    var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-        //    var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
-
-        //    if (contentBuilderOptionsFromConfiguration is not null)
-        //        options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
-        //}
 
         using var contentBuilder = app.ApplicationServices.GetRequiredService<IContentBuilder>();
         contentBuilder.Init();
@@ -52,11 +46,6 @@ public static class StartupExtensions
         Action<ContentBuilderOptions>? builderOptions = null) where TStartPage : PageData
     {
         var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
-        //var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-        //var contentBuilderOptionsFromConfiguration = configuration.GetSection(SectionName).Get<ContentBuilderOptions>();
-
-        //if (contentBuilderOptionsFromConfiguration is not null)
-        //    options.CurrentValue.ApplyFrom(contentBuilderOptionsFromConfiguration);
 
         options.CurrentValue.StartPageType = typeof(TStartPage);
         builderOptions?.Invoke(options.CurrentValue);

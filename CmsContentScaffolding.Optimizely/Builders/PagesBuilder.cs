@@ -106,7 +106,7 @@ internal class PagesBuilder : IPagesBuilder
         if (existingPage is null)
         {
             page.URLSegment = _urlSegmentGenerator.Create(page.Name);
-            contentReference = _contentRepository.Save(page, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+            contentReference = _contentRepository.Save(page, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
         }
         else
         {
@@ -166,7 +166,7 @@ internal class PagesBuilder : IPagesBuilder
             if (existingPage is null)
             {
                 page.URLSegment = _urlSegmentGenerator.Create(page.Name);
-                contentReferences[i] = _contentRepository.Save(page, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+                contentReferences[i] = _contentRepository.Save(page, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
             }
             else
             {
@@ -214,7 +214,7 @@ internal class PagesBuilder : IPagesBuilder
         value?.Invoke(existingPageWritable);
 
         existingPageWritable.URLSegment = _urlSegmentGenerator.Create(existingPageWritable.Name);
-        _contentRepository.Save(existingPageWritable, SaveAction.Patch, AccessLevel.NoAccess);
+        _contentRepository.Save(existingPageWritable, SaveAction.Patch | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     private T CreatePageDraftAndInvoke<T>(Action<T>? value = null, string? nameSuffix = default) where T : PageData
@@ -263,7 +263,7 @@ internal class PagesBuilder : IPagesBuilder
         var translatedPage = _contentRepository.CreateLanguageBranch<T>(contentReference, translationLanguage);
         translation?.Invoke(translatedPage);
 
-        _contentRepository.Save(translatedPage, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        _contentRepository.Save(translatedPage, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     #endregion

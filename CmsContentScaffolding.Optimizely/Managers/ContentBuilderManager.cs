@@ -32,6 +32,8 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     public static ContentReference CurrentAssetsReference { get; set; } = ContentReference.GlobalBlockFolder;
 
+    private static readonly object _siteCreationLock = new();
+
     public bool SiteExists =>
         _siteDefinitionRepository
         .List()
@@ -69,60 +71,76 @@ internal class ContentBuilderManager : IContentBuilderManager
     public SiteDefinition GetOrCreateSite()
     {
         var siteUri = new Uri(_options.CurrentValue.SiteHost);
-        var existingSite = _siteDefinitionRepository
-            .List()
-            .SingleOrDefault(x => x.Hosts.Any(x => x.Name.Equals(siteUri.Authority)));
 
-        if (_options.CurrentValue.ReplaceExistingPrimarySite)
+        // Fast path: if a matching site already exists and we're not asked to
+        // replace the primary, skip the lock entirely. Repository reads are
+        // thread-safe; only the create/replace branches need serialization.
+        if (!_options.CurrentValue.ReplaceExistingPrimarySite)
         {
-            var primarySite = _siteDefinitionRepository.List().Where(x => x.Hosts.Any(y => y.Type == HostDefinitionType.Primary)).SingleOrDefault();
-            if (primarySite != null)
-            {
-                var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
-                primaryHost.Type = HostDefinitionType.Undefined;
+            var existing = _siteDefinitionRepository
+                .List()
+                .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
 
-                primarySite.Hosts.Remove(primaryHost);
-                primarySite.Hosts.Add(new()
-                {
-                    Name = siteUri.Authority,
-                    Language = _options.CurrentValue.Language,
-                    Type = HostDefinitionType.Primary,
-                    UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
-                });
-
-                _siteDefinitionRepository.Save(primarySite);
-
-                existingSite = primarySite;
-            }
+            if (existing is not null)
+                return existing;
         }
 
-        if (existingSite is not null)
+        lock (_siteCreationLock)
         {
-            return existingSite;
-        }
+            // Re-check inside the lock — another thread may have just created it.
+            var existingSite = _siteDefinitionRepository
+                .List()
+                .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
 
-        var startPage = TryCreateStartPage();
-        var siteDefinition = new SiteDefinition
-        {
-            Name = _options.CurrentValue.SiteName,
-            StartPage = startPage,
-            SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
-            SiteUrl = siteUri,
-            Hosts = new List<HostDefinition>
+            if (_options.CurrentValue.ReplaceExistingPrimarySite)
             {
-                new()
+                var primarySite = _siteDefinitionRepository
+                    .List()
+                    .SingleOrDefault(x => x.Hosts.Any(y => y.Type == HostDefinitionType.Primary));
+
+                if (primarySite != null)
                 {
-                    Name = siteUri.Authority,
-                    Language = _options.CurrentValue.Language,
-                    Type = HostDefinitionType.Primary,
-                    UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                    var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
+                    primaryHost.Type = HostDefinitionType.Undefined;
+                    primarySite.Hosts.Remove(primaryHost);
+                    primarySite.Hosts.Add(new()
+                    {
+                        Name = siteUri.Authority,
+                        Language = _options.CurrentValue.Language,
+                        Type = HostDefinitionType.Primary,
+                        UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                    });
+
+                    _siteDefinitionRepository.Save(primarySite);
+                    existingSite = primarySite;
                 }
             }
-        };
 
-        _siteDefinitionRepository.Save(siteDefinition);
+            if (existingSite is not null)
+                return existingSite;
 
-        return siteDefinition;
+            var startPage = TryCreateStartPage();
+            var siteDefinition = new SiteDefinition
+            {
+                Name = _options.CurrentValue.SiteName,
+                StartPage = startPage,
+                SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
+                SiteUrl = siteUri,
+                Hosts = new List<HostDefinition>
+                 {
+                     new()
+                     {
+                         Name = siteUri.Authority,
+                         Language = _options.CurrentValue.Language,
+                         Type = HostDefinitionType.Primary,
+                         UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                     }
+                 }
+            };
+
+            _siteDefinitionRepository.Save(siteDefinition);
+            return siteDefinition;
+        }
     }
 
     public void SetStartPageSecurity(ContentReference pageRef)
@@ -180,7 +198,7 @@ internal class ContentBuilderManager : IContentBuilderManager
         {
             var pageClone = page.CreateWritableClone();
             _ = pageClone.ExistingLanguages.Append(language);
-            _contentRepository.Save(pageClone, SaveAction.Default, AccessLevel.NoAccess);
+            _contentRepository.Save(pageClone, SaveAction.Default | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
         }
     }
 
@@ -293,7 +311,7 @@ internal class ContentBuilderManager : IContentBuilderManager
         if (!ContentReference.IsNullOrEmpty(iContent.ContentLink))
             return iContent.ContentLink;
 
-        return _contentRepository.Save(iContent, _options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default, AccessLevel.NoAccess);
+        return _contentRepository.Save(iContent, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     #endregion
