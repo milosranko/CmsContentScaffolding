@@ -12,6 +12,7 @@ namespace CmsContentScaffolding.Optimizely.Interfaces;
 internal interface IContentBuilderManager
 {
     bool SiteExists { get; }
+    bool StartPageCreated { get; }
     SiteDefinition GetOrCreateSite();
     void SetStartPageSecurity(ContentReference pageRef);
     void ApplyDefaultLanguage();

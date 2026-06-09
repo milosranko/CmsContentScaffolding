@@ -120,7 +120,7 @@ internal class PagesBuilder : IPagesBuilder
         if (isStartPage)
             _contentBuilderManager.SetStartPageSecurity(contentReference);
 
-        CreateTranslation(contentReference, translationLanguage, translation);
+        CreateTranslation(contentReference, translationLanguage, translation, isStartPage);
 
         if (options == null)
             return this;
@@ -202,7 +202,14 @@ internal class PagesBuilder : IPagesBuilder
 
     private void UpdateExistingPage<T>(T existingPage, bool isStartPage, Action<T>? value) where T : PageData
     {
-        if (!isStartPage && _options.CurrentValue.BuildMode != BuildMode.Overwrite)
+        // Only (re)write an existing page when overwriting, or when this is the start
+        // page that was just created during this run and still needs its initial
+        // content. Without this guard the start page (which bypasses BuildMode) is
+        // rewritten on every application start: InitProperties resets its content
+        // areas, so a new published version is created with an empty MainContentArea
+        // and the previously built content is lost.
+        if (_options.CurrentValue.BuildMode != BuildMode.Overwrite &&
+            !(isStartPage && _contentBuilderManager.StartPageCreated))
             return;
 
         var existingPageWritable = (T)existingPage.CreateWritableClone();
@@ -214,7 +221,15 @@ internal class PagesBuilder : IPagesBuilder
         value?.Invoke(existingPageWritable);
 
         existingPageWritable.URLSegment = _urlSegmentGenerator.Create(existingPageWritable.Name);
-        _contentRepository.Save(existingPageWritable, SaveAction.Patch | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
+
+        // The start page must be published so the site has a servable version that
+        // survives an application restart; SaveAction.Patch would only update the
+        // draft in place and never produce a published version. Ordinary overwritten
+        // pages keep the existing Patch behaviour.
+        var saveAction = (isStartPage ? SaveAction.Publish : SaveAction.Patch)
+            | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default);
+
+        _contentRepository.Save(existingPageWritable, saveAction, AccessLevel.NoAccess);
     }
 
     private T CreatePageDraftAndInvoke<T>(Action<T>? value = null, string? nameSuffix = default) where T : PageData
@@ -252,7 +267,7 @@ internal class PagesBuilder : IPagesBuilder
         _contentRepository.Delete(page.ContentLink, true, AccessLevel.NoAccess);
     }
 
-    private void CreateTranslation<T>(ContentReference contentReference, CultureInfo? translationLanguage, Action<T>? translation) where T : PageData
+    private void CreateTranslation<T>(ContentReference contentReference, CultureInfo? translationLanguage, Action<T>? translation, bool isStartPage = false) where T : PageData
     {
         if (ContentReference.IsNullOrEmpty(contentReference) || translationLanguage == null || translation == null)
             return;
@@ -263,7 +278,9 @@ internal class PagesBuilder : IPagesBuilder
         var translatedPage = _contentRepository.CreateLanguageBranch<T>(contentReference, translationLanguage);
         translation?.Invoke(translatedPage);
 
-        _contentRepository.Save(translatedPage, (_options.CurrentValue.PublishContent ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
+        // Publish start page translations as well, otherwise the translated start page
+        // only exists as a draft and is lost after an application restart.
+        _contentRepository.Save(translatedPage, ((isStartPage || _options.CurrentValue.PublishContent) ? SaveAction.Publish : SaveAction.Default) | (_options.CurrentValue.SkipValidation ? SaveAction.SkipValidation : SaveAction.Default), AccessLevel.NoAccess);
     }
 
     #endregion

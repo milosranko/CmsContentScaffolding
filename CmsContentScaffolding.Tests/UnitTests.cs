@@ -204,6 +204,81 @@ public class UnitTests
     }
 
     [TestMethod]
+    public void StartPage_ShouldHavePublishedVersion_SoItSurvivesRestart()
+    {
+        //Arrange
+        var contentLoader = ServiceLocator.Current.GetRequiredService<IContentLoader>();
+        var siteDefinitionRepository = ServiceLocator.Current.GetRequiredService<ISiteDefinitionRepository>();
+        var site = siteDefinitionRepository.Get("Site 1");
+
+        //Act
+        var startPage = contentLoader.Get<StartPage>(site.StartPage, Language);
+        var status = ((IVersionable)startPage).Status;
+
+        //Assert: the site's start page must resolve to a Published version. A live
+        // request after an application restart serves the published version only;
+        // if the start page exists solely as a draft its content appears lost.
+        Assert.AreEqual(VersionStatus.Published, status, "Start page is not Published - it only exists as a draft, so its content is lost after restart.");
+        Assert.IsNotNull(startPage.MainContentArea);
+        Assert.IsFalse(startPage.MainContentArea.IsEmpty, "Published start page MainContentArea is empty.");
+    }
+
+    [TestMethod]
+    public void StartPage_ShouldNotBeWipedOrRepublished_OnAppendRestart()
+    {
+        //Arrange
+        var contentBuilder = ServiceLocator.Current.GetRequiredService<IContentBuilder>();
+        var contentLoader = ServiceLocator.Current.GetRequiredService<IContentLoader>();
+        var siteDefinitionRepository = ServiceLocator.Current.GetRequiredService<ISiteDefinitionRepository>();
+        var options = ServiceLocator.Current.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
+
+        var site = siteDefinitionRepository.Get("Site 1");
+        var before = contentLoader.Get<StartPage>(site.StartPage, Language);
+        var beforeContentCount = before.MainContentArea.Count;
+        Assert.IsTrue(beforeContentCount > 0, "Precondition: start page should already have MainContentArea items.");
+
+        var snapshot = new ContentBuilderOptions();
+        snapshot.ApplyFrom(options.CurrentValue);
+        var originalCurrentSite = SiteDefinition.Current;
+
+        //Act - simulate an application restart that re-runs scaffolding in Append mode,
+        // where the start-page lambda does not repopulate the MainContentArea.
+        try
+        {
+            options.CurrentValue.SiteName = "Site 1";
+            options.CurrentValue.SiteHost = Site1HostUrl;
+            options.CurrentValue.Language = Language;
+            options.CurrentValue.StartPageType = typeof(StartPage);
+            options.CurrentValue.BuildMode = BuildMode.Append;
+            options.CurrentValue.PublishContent = false;
+            options.CurrentValue.SkipValidation = true;
+
+            contentBuilder.Init();
+            contentBuilder
+                .UsePages(ContentReference.RootPage)
+                .WithStartPage<StartPage>(p =>
+                {
+                    // Same name as the existing start page so it is matched and updated
+                    // (as happens on a real restart), but the content area is not repopulated.
+                    p.Name = "Home Page";
+                    p.Heading = "Restart Heading";
+                });
+        }
+        finally
+        {
+            options.CurrentValue.ApplyFrom(snapshot);
+            SiteDefinition.Current = originalCurrentSite;
+        }
+
+        //Assert - the existing start page must be left untouched: same content and no
+        // new published version with an empty MainContentArea.
+        var after = contentLoader.Get<StartPage>(siteDefinitionRepository.Get("Site 1").StartPage, Language);
+        Assert.AreEqual(VersionStatus.Published, ((IVersionable)after).Status);
+        Assert.IsTrue(after.MainContentArea != null && !after.MainContentArea.IsEmpty, "MainContentArea was wiped on restart.");
+        Assert.AreEqual(beforeContentCount, after.MainContentArea!.Count, "MainContentArea item count changed on restart.");
+    }
+
+    [TestMethod]
     public async Task GetSiteStartPage_ShouldReturnHtml()
     {
         //Arrange

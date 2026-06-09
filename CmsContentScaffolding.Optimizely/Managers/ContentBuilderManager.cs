@@ -34,6 +34,14 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     private static readonly object _siteCreationLock = new();
 
+    /// <summary>
+    /// True when the start page was created during this build run (i.e. the site
+    /// did not previously exist). Used to decide whether the start page should
+    /// receive its initial content, so that an already-existing start page is not
+    /// re-written (and its MainContentArea wiped) on every application restart.
+    /// </summary>
+    public bool StartPageCreated { get; private set; }
+
     public bool SiteExists =>
         _siteDefinitionRepository
         .List()
@@ -327,7 +335,18 @@ internal class ContentBuilderManager : IContentBuilderManager
         var startPage = _contentRepository.GetDefault<PageData>(ContentReference.RootPage, startPageType.ID, _options.CurrentValue.Language);
         startPage.Name = _options.CurrentValue.StartPageType.Name;
 
-        return _contentRepository.Save(startPage, _options.CurrentValue.PublishContent ? SaveAction.SkipValidation | SaveAction.Publish : SaveAction.SkipValidation | SaveAction.Default, AccessLevel.NoAccess);
+        // The start page is the site's entry point and must always have a published
+        // version. If it is only saved as a draft (SaveAction.Default), the site has
+        // no servable start page once the application restarts and the content cache
+        // is gone, so its content appears to be lost. Publish it regardless of
+        // PublishContent; validation is skipped because this initial page is empty.
+        var startPageReference = _contentRepository.Save(startPage, SaveAction.SkipValidation | SaveAction.Publish, AccessLevel.NoAccess);
+
+        // Flag that this run created the start page, so its initial content is applied
+        // exactly once. On later runs the existing start page must be left untouched.
+        StartPageCreated = true;
+
+        return startPageReference;
     }
 
     private ContentReference GetOrCreateSiteAssetsRoot(ContentReference pageRef)
