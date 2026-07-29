@@ -109,17 +109,26 @@ internal class ContentBuilderManager : IContentBuilderManager
                 if (primarySite != null)
                 {
                     var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
-                    primaryHost.Type = HostDefinitionType.Undefined;
-                    primarySite.Hosts.Remove(primaryHost);
-                    primarySite.Hosts.Add(new()
-                    {
-                        Name = siteUri.Authority,
-                        Language = _options.CurrentValue.Language,
-                        Type = HostDefinitionType.Primary,
-                        UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
-                    });
 
-                    _siteDefinitionRepository.Save(primarySite);
+                    // Only save when the host actually differs, otherwise every Init() run
+                    // would churn the site definition and its cache for no reason.
+                    if (!primaryHost.Name.Equals(siteUri.Authority, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var writableSite = primarySite.CreateWritableClone();
+
+                        writableSite.Hosts.Remove(writableSite.Hosts.Single(x => x.Type == HostDefinitionType.Primary));
+                        writableSite.Hosts.Add(new()
+                        {
+                            Name = siteUri.Authority,
+                            Language = _options.CurrentValue.Language,
+                            Type = HostDefinitionType.Primary,
+                            UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                        });
+
+                        _siteDefinitionRepository.Save(writableSite);
+                        primarySite = writableSite;
+                    }
+
                     existingSite = primarySite;
                 }
             }
