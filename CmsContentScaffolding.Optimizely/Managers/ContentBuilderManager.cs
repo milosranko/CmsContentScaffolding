@@ -80,58 +80,22 @@ internal class ContentBuilderManager : IContentBuilderManager
     {
         var siteUri = new Uri(_options.CurrentValue.SiteHost);
 
-        // Fast path: if a matching site already exists and we're not asked to
-        // replace the primary, skip the lock entirely. Repository reads are
-        // thread-safe; only the create/replace branches need serialization.
-        if (!_options.CurrentValue.ReplaceExistingPrimarySite)
-        {
-            var existing = _siteDefinitionRepository
-                .List()
-                .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
+        // Fast path: if a matching site already exists, skip the lock entirely.
+        // Repository reads are thread-safe; only creation needs serialization.
+        var existing = _siteDefinitionRepository
+            .List()
+            .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
 
-            if (existing is not null)
-                return existing;
-        }
+        if (existing is not null)
+            return existing;
 
         lock (_siteCreationLock)
         {
-            // Re-check inside the lock — another thread may have just created it.
+            // Re-check inside the lock, another thread may have created the site
+            // between the fast path above and acquiring the lock.
             var existingSite = _siteDefinitionRepository
                 .List()
                 .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
-
-            if (_options.CurrentValue.ReplaceExistingPrimarySite)
-            {
-                var primarySite = _siteDefinitionRepository
-                    .List()
-                    .SingleOrDefault(x => x.Hosts.Any(y => y.Type == HostDefinitionType.Primary));
-
-                if (primarySite != null)
-                {
-                    var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
-
-                    // Only save when the host actually differs, otherwise every Init() run
-                    // would churn the site definition and its cache for no reason.
-                    if (!primaryHost.Name.Equals(siteUri.Authority, StringComparison.OrdinalIgnoreCase))
-                    {
-                        var writableSite = primarySite.CreateWritableClone();
-
-                        writableSite.Hosts.Remove(writableSite.Hosts.Single(x => x.Type == HostDefinitionType.Primary));
-                        writableSite.Hosts.Add(new()
-                        {
-                            Name = siteUri.Authority,
-                            Language = _options.CurrentValue.Language,
-                            Type = HostDefinitionType.Primary,
-                            UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
-                        });
-
-                        _siteDefinitionRepository.Save(writableSite);
-                        primarySite = writableSite;
-                    }
-
-                    existingSite = primarySite;
-                }
-            }
 
             if (existingSite is not null)
                 return existingSite;
@@ -157,6 +121,47 @@ internal class ContentBuilderManager : IContentBuilderManager
 
             _siteDefinitionRepository.Save(siteDefinition);
             return siteDefinition;
+        }
+    }
+
+    public SiteDefinition? ReplacePrimarySite()
+    {
+        var siteUri = new Uri(_options.CurrentValue.SiteHost);
+
+        // Shares the lock with GetOrCreateSite so a replace and a create can never race.
+        lock (_siteCreationLock)
+        {
+            var primarySite = _siteDefinitionRepository
+                .List()
+                .SingleOrDefault(x => x.Hosts.Any(y => y.Type == HostDefinitionType.Primary));
+
+            if (primarySite is null)
+                return null;
+
+            var primaryHost = primarySite.Hosts.Single(x => x.Type == HostDefinitionType.Primary);
+
+            // Only save when the host actually differs, otherwise every startup
+            // would churn the site definition and its cache for no reason.
+            if (primaryHost.Name.Equals(siteUri.Authority, StringComparison.OrdinalIgnoreCase))
+                return primarySite;
+
+            // List() returns the shared cached instance, never mutate it directly.
+            var writableSite = primarySite.CreateWritableClone();
+
+            writableSite.Name = _options.CurrentValue.SiteName;
+            writableSite.SiteUrl = siteUri;
+            writableSite.Hosts.Remove(writableSite.Hosts.Single(x => x.Type == HostDefinitionType.Primary));
+            writableSite.Hosts.Add(new()
+            {
+                Name = siteUri.Authority,
+                Language = _options.CurrentValue.Language,
+                Type = HostDefinitionType.Primary,
+                UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+            });
+
+            _siteDefinitionRepository.Save(writableSite);
+
+            return writableSite;
         }
     }
 

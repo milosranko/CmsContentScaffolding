@@ -215,4 +215,26 @@ app.UseCmsContentScaffolding(
         );
     });
 ```
+### Replacing the primary site host (Optimizely)
+
+When a database is copied from another environment, its primary site definition still points at that
+environment's host. `ReplacePrimarySiteHost` repoints the existing primary site at the configured
+`SiteHost`, `SiteName` and `Language`, without creating or modifying any content.
+```
+//Values are taken from the "CmsContentScaffolding" section in appsettings.json
+app.ReplacePrimarySiteHost();
+
+//or set them inline
+app.ReplacePrimarySiteHost(o =>
+{
+    o.SiteName = "Demo";
+    o.SiteHost = "https://localhost:5000";
+    o.Language = CultureInfo.GetCultureInfo("en");
+});
+```
+Call it before `UseCmsContentScaffolding`, which resolves the site by its host name. It does nothing
+when no primary site exists or when its primary host already matches the configured `SiteHost`.
+Options set through the lambda are applied to the shared options instance, so they also apply to any
+subsequent `UseCmsContentScaffolding` call.
+
 For more code examples take a look in Tests project, also check out blog post on Optimizely World: https://world.optimizely.com/blogs/milosr/dates/2024/4/optimizely-unit-testing-using-cmscontentscaffolding-package/

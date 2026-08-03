@@ -126,3 +126,23 @@ app.UseCmsContentScaffolding(
             }, 2);
         }, 2);
     });
+
+## Replacing the primary site host
+
+When a database is copied from another environment, its primary site definition still points at that
+environment's host. `ReplacePrimarySiteHost` repoints the existing primary site at the configured
+`SiteHost`, `SiteName` and `Language`, without creating or modifying any content.
+
+//Values are taken from the "CmsContentScaffolding" section in appsettings.json
+app.ReplacePrimarySiteHost();
+
+//or set them inline
+app.ReplacePrimarySiteHost(o =>
+{
+    o.SiteName = "Demo";
+    o.SiteHost = "https://localhost:5000";
+    o.Language = CultureInfo.GetCultureInfo("en");
+});
+
+Call it before `UseCmsContentScaffolding`, which resolves the site by its host name. It does nothing
+when no primary site exists or when its primary host already matches the configured `SiteHost`.

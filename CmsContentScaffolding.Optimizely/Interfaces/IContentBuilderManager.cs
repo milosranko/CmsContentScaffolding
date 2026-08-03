@@ -14,6 +14,11 @@ internal interface IContentBuilderManager
     bool SiteExists { get; }
     bool StartPageCreated { get; }
     SiteDefinition GetOrCreateSite();
+    /// <summary>
+    /// Repoints the existing primary site definition at the configured SiteHost, SiteName and Language.
+    /// Returns the primary site definition, or null when no primary site exists.
+    /// </summary>
+    SiteDefinition? ReplacePrimarySite();
     void SetStartPageSecurity(ContentReference pageRef);
     void ApplyDefaultLanguage();
     void CreateAndEnableLanguage(CultureInfo culture);

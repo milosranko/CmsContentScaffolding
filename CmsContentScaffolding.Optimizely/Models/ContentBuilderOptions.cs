@@ -45,10 +45,6 @@ public class ContentBuilderOptions
     /// </summary>
     public IList<UserModel>? Users { get; set; }
     /// <summary>
-    /// Replaces existing primary site if it already exists. Use with caution, as it will override the existing site and all its content. Usefull when transfering DB from one environment to another.
-    /// </summary>
-    public bool ReplaceExistingPrimarySite { get; set; } = false;
-    /// <summary>
     /// If set to true, content will be saved with SaveAction.SkipValidation flag, bypassing required property and other validation checks.
     /// </summary>
     public bool SkipValidation { get; set; } = false;

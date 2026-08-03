@@ -24,6 +24,29 @@ public static class StartupExtensions
             .AddTransient<IContentBuilder, ContentBuilder>();
     }
 
+    /// <summary>
+    /// Repoints the existing primary site definition at the configured SiteHost, SiteName and Language.
+    /// Useful when a database is transferred from one environment to another. Does nothing when no primary
+    /// site exists or when its primary host already matches the configured SiteHost.
+    /// Call before <see cref="UseCmsContentScaffolding(IApplicationBuilder, Action{IContentBuilder}, Action{ContentBuilderOptions}?)"/>,
+    /// which resolves the site by its host name. Note that options set through <paramref name="builderOptions"/>
+    /// are applied to the shared options instance and therefore also apply to any subsequent call.
+    /// </summary>
+    public static IApplicationBuilder ReplacePrimarySiteHost(
+        this IApplicationBuilder app,
+        Action<ContentBuilderOptions>? builderOptions = null)
+    {
+        var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<ContentBuilderOptions>>();
+
+        builderOptions?.Invoke(options.CurrentValue);
+
+        var contentBuilderManager = app.ApplicationServices.GetRequiredService<IContentBuilderManager>();
+
+        contentBuilderManager.ReplacePrimarySite();
+
+        return app;
+    }
+
     public static IApplicationBuilder UseCmsContentScaffolding(
         this IApplicationBuilder app,
         Action<IContentBuilder> builder,
