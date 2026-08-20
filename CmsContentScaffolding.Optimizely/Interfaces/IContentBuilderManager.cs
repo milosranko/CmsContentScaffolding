@@ -11,9 +11,10 @@ namespace CmsContentScaffolding.Optimizely.Interfaces;
 /// </summary>
 internal interface IContentBuilderManager
 {
+    bool AnySiteExists { get; }
     bool SiteExists { get; }
     bool StartPageCreated { get; }
-    SiteDefinition GetOrCreateSite();
+    SiteDefinition? GetOrCreateSite();
     /// <summary>
     /// Repoints the existing primary site definition at the configured SiteHost, SiteName and Language.
     /// Returns the primary site definition, or null when no primary site exists.

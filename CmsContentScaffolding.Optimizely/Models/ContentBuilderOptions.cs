@@ -27,7 +27,7 @@ public class ContentBuilderOptions
     /// <summary>
     /// Set build mode
     /// </summary>
-    public BuildMode BuildMode { get; set; } = BuildMode.Append;
+    public BuildMode BuildMode { get; set; } = BuildMode.OnlyIfEmpty;
     /// <summary>
     /// Set if content should be published when created, default is False
     /// </summary>

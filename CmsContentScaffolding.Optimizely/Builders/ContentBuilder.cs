@@ -68,7 +68,11 @@ internal class ContentBuilder : IContentBuilder
             _contentBuilderOptions.CurrentValue.ApplyFrom(options);
 
         ApplyOptions();
-        SiteDefinition.Current = _contentBuilderManager.GetOrCreateSite();
+
+        var site = _contentBuilderManager.GetOrCreateSite();
+
+        if (site is not null)
+            SiteDefinition.Current = site;
     }
 
     #endregion
@@ -86,7 +90,7 @@ internal class ContentBuilder : IContentBuilder
                 _buildContent = true;
                 break;
             case BuildMode.OnlyIfEmpty:
-                _buildContent = !_contentBuilderManager.SiteExists;
+                _buildContent = !_contentBuilderManager.AnySiteExists;
                 break;
             default:
                 break;

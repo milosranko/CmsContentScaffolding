@@ -42,6 +42,11 @@ internal class ContentBuilderManager : IContentBuilderManager
     /// </summary>
     public bool StartPageCreated { get; private set; }
 
+    public bool AnySiteExists =>
+        _siteDefinitionRepository
+        .List()
+        .Any();
+
     public bool SiteExists =>
         _siteDefinitionRepository
         .List()
@@ -76,18 +81,17 @@ internal class ContentBuilderManager : IContentBuilderManager
 
     #region Public methods
 
-    public SiteDefinition GetOrCreateSite()
+    public SiteDefinition? GetOrCreateSite()
     {
         var siteUri = new Uri(_options.CurrentValue.SiteHost);
-
-        // Fast path: if a matching site already exists, skip the lock entirely.
-        // Repository reads are thread-safe; only creation needs serialization.
-        var existing = _siteDefinitionRepository
-            .List()
-            .SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)));
+        var sites = _siteDefinitionRepository.List();
+        var existing = sites.SingleOrDefault(x => x.Hosts.Any(h => h.Name.Equals(siteUri.Authority)) || x.GetPrimaryHost(_options.CurrentValue.Language) is not null);
 
         if (existing is not null)
             return existing;
+
+        if (sites.Any() && _options.CurrentValue.BuildMode == BuildMode.OnlyIfEmpty)
+            return default;
 
         lock (_siteCreationLock)
         {
@@ -108,18 +112,19 @@ internal class ContentBuilderManager : IContentBuilderManager
                 SiteAssetsRoot = GetOrCreateSiteAssetsRoot(startPage),
                 SiteUrl = siteUri,
                 Hosts = new List<HostDefinition>
-                 {
-                     new()
-                     {
-                         Name = siteUri.Authority,
-                         Language = _options.CurrentValue.Language,
-                         Type = HostDefinitionType.Primary,
-                         UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
-                     }
-                 }
+                {
+                    new()
+                    {
+                        Name = siteUri.Authority,
+                        Language = _options.CurrentValue.Language,
+                        Type = HostDefinitionType.Primary,
+                        UseSecureConnection = siteUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+                    }
+                }
             };
 
             _siteDefinitionRepository.Save(siteDefinition);
+
             return siteDefinition;
         }
     }
